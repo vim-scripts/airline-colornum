@@ -1,0 +1,6 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=5219
+
+Sets the cursor line number to the same color as the current mode in the statusline set by the Vim Airline plugin.
+
+More details and documentation at the Github repository:
+https://github.com/ntpeters/vim-airline-colornum
