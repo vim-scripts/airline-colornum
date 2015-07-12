@@ -46,12 +46,27 @@ endfunction
 
 " Gets the statusline colors for the current mode from Airline
 function! s:GetAirlineModeColors()
+    " Fallback value if unable to determine colors. This will reset highlight
+    " to default values
+    let l:fallback = [ 'NONE', 'NONE', 'NONE', 'NONE' ]
+
     " Ensures the current palette has colors for the current mode
     if has_key(g:airline#themes#{g:airline_theme}#palette, s:airline_mode)
         " Fetch colors from the current theme palette
-        let l:mode_fg = g:airline#themes#{g:airline_theme}#palette[s:airline_mode]['airline_z'][2]
-        let l:mode_bg = g:airline#themes#{g:airline_theme}#palette[s:airline_mode]['airline_z'][3]
-        return [l:mode_fg, l:mode_bg]
+        "   If 'airline_z' is undefined, fallback to 'airline_a'
+        "   they should be equivalent
+        if has_key(g:airline#themes#{g:airline_theme}#palette[s:airline_mode], 'airline_z')
+            return g:airline#themes#{g:airline_theme}#palette[s:airline_mode]['airline_z']
+        elseif has_key(g:airline#themes#{g:airline_theme}#palette[s:airline_mode], 'airline_a')
+            return g:airline#themes#{g:airline_theme}#palette[s:airline_mode]['airline_a']
+        else
+            " This should never happen as long as airline is loaded...
+            echom "Error getting colors from airline! - Section key undefined!"
+            return l:fallback
+        endif
+    else
+        echom "Error getting colors from airline! - Mode key undefined!"
+        return l:fallback
     endif
 endfunction
 
@@ -60,12 +75,18 @@ function! s:SetCursorLineNrColor()
     " Update cursor line number color
     let l:mode_colors = <SID>GetAirlineModeColors()
     if !empty(l:mode_colors)
-        exec printf('highlight %s %s %s %s %s',
+        let l:resolve_index = [ 'guifg', 'guibg', 'ctermfg', 'ctermbg' ]
+        let l:mode_colors_exec = []
+        for l:i in range(0, 3, 1)
+            if !empty(l:mode_colors[l:i])
+                let l:mode_colors_exec = add(l:mode_colors_exec,
+                    \ l:resolve_index[l:i] . '=' .
+                    \ l:mode_colors[l:i])
+            endif
+        endfor
+        exec printf('highlight %s %s',
                 \ 'CursorLineNr',
-                \ 'guifg='.mode_colors[0],
-                \ 'guibg='.mode_colors[1],
-                \ 'ctermfg='.mode_colors[0],
-                \ 'ctermbg='.mode_colors[1])
+                \ join(l:mode_colors_exec, ' '))
     endif
 endfunction
 
@@ -133,7 +154,7 @@ endfunction
 " Ensure line number is update every time the status line is updated
 function! s:LoadCursorLineNrUpdates()
     " Only add to statusline if Airline is loaded and it has not been added
-    if g:loaded_airline == 1
+    if get(g:, 'loaded_airline', 0) == 1
         if exists('g:airline_section_z') && g:airline_section_z !~ 'UpdateCursorLineNr'
             let g:airline_section_z .= '%{UpdateCursorLineNr()}'
             " Force color to update now
